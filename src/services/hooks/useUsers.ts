@@ -8,14 +8,10 @@ type User = {
   createdAt: string;
 };
 
-type ResponseUser = {
-  users: User[];
-};
+export async function getUsers(): Promise<User[]> {
+  const { data } = await api.get('users');
 
-export async function getUsers() {
-  const { data } = await api.get<ResponseUser>('users');
-
-  const users = data.users.map((user) => {
+  const users = data.map((user) => {
     return {
       ...user,
       createdAt: new Date(user.createdAt).toLocaleDateString('pt-BR', {
