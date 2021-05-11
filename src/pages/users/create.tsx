@@ -8,13 +8,17 @@ import {
   SimpleGrid,
   VStack,
 } from '@chakra-ui/react';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useRouter } from 'next/dist/client/router';
 import Link from 'next/link';
-import { Input } from '../../components/Form/Input';
+import { SubmitHandler, useForm } from 'react-hook-form';
+import { useMutation } from 'react-query';
 import * as yup from 'yup';
+import { Input } from '../../components/Form/Input';
 import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
-import { SubmitHandler, useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
+import { api } from '../../services/api';
+import { queryClient } from '../../services/queryClient';
 
 type CreateUserFormData = {
   name: string;
@@ -39,15 +43,36 @@ const createUserFormSchema = yup.object().shape({
 });
 
 export default function CreateUser() {
+  const router = useRouter();
+
+  const createUser = useMutation(
+    async (user: CreateUserFormData) => {
+      const response = await api.post('users', {
+        user: {
+          ...user,
+          created_at: new Date(),
+        },
+      });
+
+      return response.data.user;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('users');
+      },
+    },
+  );
+
   const { register, handleSubmit, formState } = useForm({
     resolver: yupResolver(createUserFormSchema),
   });
 
   const handleCreateUser: SubmitHandler<CreateUserFormData> = async (
-    values
+    values,
   ) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    console.log(values);
+    await createUser.mutateAsync(values);
+
+    router.push('/users');
   };
 
   return (
@@ -63,8 +88,7 @@ export default function CreateUser() {
           borderRadius={8}
           bg='gray.800'
           p={['6', '8']}
-          onSubmit={handleSubmit(handleCreateUser)}
-        >
+          onSubmit={handleSubmit(handleCreateUser)}>
           <Heading size='lg' fontWeight='normal'>
             Criar usuário
           </Heading>
@@ -116,8 +140,7 @@ export default function CreateUser() {
               <Button
                 type='submit'
                 colorScheme='pink'
-                isLoading={formState.isSubmitting}
-              >
+                isLoading={formState.isSubmitting}>
                 Salvar
               </Button>
             </HStack>
